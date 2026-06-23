@@ -1,0 +1,86 @@
+name: Test basic usage - parse .tool-versions from root
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file in workspace root
+        run: |
+          cat > "$GITHUB_WORKSPACE/.tool-versions" <<'EOF'
+          golang 1.21.0
+          ruby 3.2.0
+          nodejs 20.5.0
+          EOF
+
+      - id: versions
+        uses: .
+
+      - name: Assert tools output is valid JSON
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          if [ -z "$TOOLS" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          echo "$TOOLS" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "FAIL: tools output is not valid JSON"
+            exit 1
+          }
+          echo "PASS: tools output is valid JSON"
+
+      - name: Assert golang version in output
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          GOLANG_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golang',''))")
+          echo "golang version: $GOLANG_VER"
+          if [ "$GOLANG_VER" != "1.21.0" ]; then
+            echo "FAIL: expected golang version '1.21.0', got '$GOLANG_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert ruby version in output
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          RUBY_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('ruby',''))")
+          echo "ruby version: $RUBY_VER"
+          if [ "$RUBY_VER" != "3.2.0" ]; then
+            echo "FAIL: expected ruby version '3.2.0', got '$RUBY_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert GOLANG_VERSION env var is exported
+        run: |
+          echo "GOLANG_VERSION=$GOLANG_VERSION"
+          if [ "$GOLANG_VERSION" != "1.21.0" ]; then
+            echo "FAIL: expected GOLANG_VERSION='1.21.0', got '$GOLANG_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert RUBY_VERSION env var is exported
+        run: |
+          echo "RUBY_VERSION=$RUBY_VERSION"
+          if [ "$RUBY_VERSION" != "3.2.0" ]; then
+            echo "FAIL: expected RUBY_VERSION='3.2.0', got '$RUBY_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert NODEJS_VERSION env var is exported
+        run: |
+          echo "NODEJS_VERSION=$NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "20.5.0" ]; then
+            echo "FAIL: expected NODEJS_VERSION='20.5.0', got '$NODEJS_VERSION'"
+            exit 1
+          fi
+          echo "PASS"

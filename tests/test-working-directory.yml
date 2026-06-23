@@ -1,0 +1,78 @@
+name: Test working_directory input - parse .tool-versions from subdirectory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file in a subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/myproject"
+          cat > "$GITHUB_WORKSPACE/myproject/.tool-versions" <<'EOF'
+          python 3.11.4
+          terraform 1.5.0
+          EOF
+
+      - id: versions
+        uses: .
+        with:
+          working_directory: ${{ github.workspace }}/myproject
+
+      - name: Assert tools output is valid JSON
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          if [ -z "$TOOLS" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          echo "$TOOLS" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "FAIL: tools output is not valid JSON"
+            exit 1
+          }
+          echo "PASS: tools output is valid JSON"
+
+      - name: Assert python version in output
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          PYTHON_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('python',''))")
+          echo "python version: $PYTHON_VER"
+          if [ "$PYTHON_VER" != "3.11.4" ]; then
+            echo "FAIL: expected python version '3.11.4', got '$PYTHON_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert terraform version in output
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          TERRAFORM_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('terraform',''))")
+          echo "terraform version: $TERRAFORM_VER"
+          if [ "$TERRAFORM_VER" != "1.5.0" ]; then
+            echo "FAIL: expected terraform version '1.5.0', got '$TERRAFORM_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert PYTHON_VERSION env var is exported
+        run: |
+          echo "PYTHON_VERSION=$PYTHON_VERSION"
+          if [ "$PYTHON_VERSION" != "3.11.4" ]; then
+            echo "FAIL: expected PYTHON_VERSION='3.11.4', got '$PYTHON_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert TERRAFORM_VERSION env var is exported
+        run: |
+          echo "TERRAFORM_VERSION=$TERRAFORM_VERSION"
+          if [ "$TERRAFORM_VERSION" != "1.5.0" ]; then
+            echo "FAIL: expected TERRAFORM_VERSION='1.5.0', got '$TERRAFORM_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
