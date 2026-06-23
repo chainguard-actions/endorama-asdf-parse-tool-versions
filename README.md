@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v1.4.1 | [`v1.4.1`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.4.1) | [`ba7882f`](https://github.com/endorama/asdf-parse-tool-versions/commit/ba7882fac059017bd3200de857a2b97a23d634db) |
 | v1.6.0 | [`v1.6.0`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.6.0) | [`e608639`](https://github.com/endorama/asdf-parse-tool-versions/commit/e60863920ff5af9bf1c794ffbaaef91384b07eed) |
 
 ## Privacy
