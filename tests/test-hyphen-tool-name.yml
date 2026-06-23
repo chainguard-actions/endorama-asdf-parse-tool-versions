@@ -1,0 +1,45 @@
+name: Test hyphen in tool name becomes underscore
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a .tool-versions file with hyphenated tool name
+        run: |
+          mkdir -p /tmp/hyphen-test
+          echo "golangci-lint 1.52.0" > /tmp/hyphen-test/.tool-versions
+
+      - id: versions
+        uses: .
+        with:
+          working_directory: /tmp/hyphen-test
+
+      - name: Assert tools JSON uses underscore key for hyphenated tool
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          if [ -z "$TOOLS" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          # The key in JSON should use underscore (golangci_lint), not hyphen
+          LINT_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golangci_lint','NOT_FOUND'))")
+          echo "golangci_lint version from JSON: $LINT_VER"
+          if [ "$LINT_VER" != "1.52.0" ]; then
+            echo "FAIL: expected golangci_lint=1.52.0 in JSON, got '$LINT_VER'"
+            exit 1
+          fi
+          echo "PASS: golangci_lint=$LINT_VER"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var is exported
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+          if [ "$GOLANGCI_LINT_VERSION" != "1.52.0" ]; then
+            echo "FAIL: expected GOLANGCI_LINT_VERSION=1.52.0, got '$GOLANGCI_LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS: GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
