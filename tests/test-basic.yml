@@ -1,0 +1,52 @@
+name: Test basic usage - parse .tool-versions
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action
+        id: versions
+        uses: .
+
+      - name: Assert tools output is valid JSON
+        env:
+          TOOLS_OUTPUT: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS_OUTPUT"
+          if [ -z "$TOOLS_OUTPUT" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          # Verify it is valid JSON
+          echo "$TOOLS_OUTPUT" | python3 -m json.tool > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "FAIL: tools output is not valid JSON"
+            exit 1
+          fi
+          echo "PASS: tools output is valid JSON"
+
+      - name: Assert nodejs version in output
+        env:
+          TOOLS_OUTPUT: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS_OUTPUT"
+          NODEJS_VERSION=$(echo "$TOOLS_OUTPUT" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('nodejs', ''))")
+          echo "nodejs version: $NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "20.11.1" ]; then
+            echo "FAIL: expected nodejs version '20.11.1', got '$NODEJS_VERSION'"
+            exit 1
+          fi
+          echo "PASS: nodejs version is correct"
+
+      - name: Assert NODEJS_VERSION env var is set
+        run: |
+          echo "NODEJS_VERSION env var: $NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "20.11.1" ]; then
+            echo "FAIL: expected NODEJS_VERSION='20.11.1', got '$NODEJS_VERSION'"
+            exit 1
+          fi
+          echo "PASS: NODEJS_VERSION env var is correct"
