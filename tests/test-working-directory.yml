@@ -1,0 +1,63 @@
+name: Test working_directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file in a subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/myproject"
+          echo "ruby 3.2.0" > "$GITHUB_WORKSPACE/myproject/.tool-versions"
+          echo "python 3.11.0" >> "$GITHUB_WORKSPACE/myproject/.tool-versions"
+
+      - id: versions
+        uses: .
+        with:
+          working_directory: ${{ github.workspace }}/myproject
+
+      - name: Assert tools output contains ruby
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          RUBY_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('ruby',''))")
+          echo "ruby version: $RUBY_VER"
+          if [ "$RUBY_VER" != "3.2.0" ]; then
+            echo "FAIL: expected ruby version '3.2.0', got '$RUBY_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert tools output contains python
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          PYTHON_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('python',''))")
+          echo "python version: $PYTHON_VER"
+          if [ "$PYTHON_VER" != "3.11.0" ]; then
+            echo "FAIL: expected python version '3.11.0', got '$PYTHON_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert RUBY_VERSION env var is set
+        run: |
+          echo "RUBY_VERSION: $RUBY_VERSION"
+          if [ "$RUBY_VERSION" != "3.2.0" ]; then
+            echo "FAIL: expected RUBY_VERSION='3.2.0', got '$RUBY_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert PYTHON_VERSION env var is set
+        run: |
+          echo "PYTHON_VERSION: $PYTHON_VERSION"
+          if [ "$PYTHON_VERSION" != "3.11.0" ]; then
+            echo "FAIL: expected PYTHON_VERSION='3.11.0', got '$PYTHON_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
