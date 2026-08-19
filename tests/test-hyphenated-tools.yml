@@ -1,0 +1,71 @@
+name: Test hyphenated tool names - hyphens replaced with underscores
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with hyphenated tool names
+        run: |
+          mkdir -p /tmp/hyphen-test
+          cat > /tmp/hyphen-test/.tool-versions <<'EOF'
+          golangci-lint 1.54.2
+          node 18.17.0
+          EOF
+
+      - id: versions
+        uses: .
+        with:
+          working_directory: /tmp/hyphen-test
+
+      - name: Assert golangci_lint (not golangci-lint) key in JSON
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          # Hyphens should be replaced with underscores in JSON keys
+          if ! echo "$TOOLS" | grep -q '"golangci_lint"'; then
+            echo "FAIL: expected 'golangci_lint' (underscore) key in tools JSON"
+            exit 1
+          fi
+          # The hyphenated form should NOT appear
+          if echo "$TOOLS" | grep -q '"golangci-lint"'; then
+            echo "FAIL: 'golangci-lint' (hyphen) key should not appear in tools JSON"
+            exit 1
+          fi
+          echo "PASS: golangci_lint key found (hyphens replaced with underscores)"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var is exported
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+          if [ -z "$GOLANGCI_LINT_VERSION" ]; then
+            echo "FAIL: GOLANGCI_LINT_VERSION env var is not set"
+            exit 1
+          fi
+          echo "PASS: GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+
+      - name: Assert NODE_VERSION env var is exported
+        run: |
+          echo "NODE_VERSION=$NODE_VERSION"
+          if [ -z "$NODE_VERSION" ]; then
+            echo "FAIL: NODE_VERSION env var is not set"
+            exit 1
+          fi
+          echo "PASS: NODE_VERSION=$NODE_VERSION"
+
+      - name: Assert version values are correct
+        env:
+          TOOLS: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "tools output: $TOOLS"
+          if ! echo "$TOOLS" | grep -q '1.54.2'; then
+            echo "FAIL: expected version '1.54.2' for golangci-lint"
+            exit 1
+          fi
+          if ! echo "$TOOLS" | grep -q '18.17.0'; then
+            echo "FAIL: expected version '18.17.0' for node"
+            exit 1
+          fi
+          echo "PASS: version values are correct"
