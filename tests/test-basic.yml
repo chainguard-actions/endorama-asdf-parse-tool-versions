@@ -9,25 +9,25 @@ jobs:
 
       - name: Create .tool-versions file in workspace root
         run: |
-          cat > "$GITHUB_WORKSPACE/.tool-versions" <<'EOF'
+          cat > "$GITHUB_WORKSPACE/.tool-versions" << 'EOF'
           golang 1.21.0
           ruby 3.2.0
-          nodejs 20.5.0
+          nodejs 20.5.1
           EOF
 
-      - id: versions
+      - id: action
         uses: .
 
       - name: Assert tools output is valid JSON
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          echo "tools output: $TOOLS"
-          if [ -z "$TOOLS" ]; then
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
             echo "FAIL: tools output is empty"
             exit 1
           fi
-          echo "$TOOLS" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+          echo "$ACTUAL" | python3 -c "import sys, json; json.load(sys.stdin)" || {
             echo "FAIL: tools output is not valid JSON"
             exit 1
           }
@@ -35,10 +35,10 @@ jobs:
 
       - name: Assert golang version in output
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          echo "tools output: $TOOLS"
-          GOLANG_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golang',''))")
+          echo "actual: $ACTUAL"
+          GOLANG_VER=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golang',''))")
           echo "golang version: $GOLANG_VER"
           if [ "$GOLANG_VER" != "1.21.0" ]; then
             echo "FAIL: expected golang version '1.21.0', got '$GOLANG_VER'"
@@ -48,9 +48,10 @@ jobs:
 
       - name: Assert ruby version in output
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          RUBY_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('ruby',''))")
+          echo "actual: $ACTUAL"
+          RUBY_VER=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('ruby',''))")
           echo "ruby version: $RUBY_VER"
           if [ "$RUBY_VER" != "3.2.0" ]; then
             echo "FAIL: expected ruby version '3.2.0', got '$RUBY_VER'"
@@ -58,7 +59,7 @@ jobs:
           fi
           echo "PASS"
 
-      - name: Assert GOLANG_VERSION env var is exported
+      - name: Assert GOLANG_VERSION env var is set
         run: |
           echo "GOLANG_VERSION=$GOLANG_VERSION"
           if [ "$GOLANG_VERSION" != "1.21.0" ]; then
@@ -67,7 +68,7 @@ jobs:
           fi
           echo "PASS"
 
-      - name: Assert RUBY_VERSION env var is exported
+      - name: Assert RUBY_VERSION env var is set
         run: |
           echo "RUBY_VERSION=$RUBY_VERSION"
           if [ "$RUBY_VERSION" != "3.2.0" ]; then
@@ -76,11 +77,11 @@ jobs:
           fi
           echo "PASS"
 
-      - name: Assert NODEJS_VERSION env var is exported
+      - name: Assert NODEJS_VERSION env var is set
         run: |
           echo "NODEJS_VERSION=$NODEJS_VERSION"
-          if [ "$NODEJS_VERSION" != "20.5.0" ]; then
-            echo "FAIL: expected NODEJS_VERSION='20.5.0', got '$NODEJS_VERSION'"
+          if [ "$NODEJS_VERSION" != "20.5.1" ]; then
+            echo "FAIL: expected NODEJS_VERSION='20.5.1', got '$NODEJS_VERSION'"
             exit 1
           fi
           echo "PASS"

@@ -1,0 +1,53 @@
+name: build-test
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'releases/*'
+
+permissions: {}
+
+jobs:
+  build: # make sure build/ci work properly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Set Node.js 24.x
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.x
+      - run: |
+          npm install
+      - run: |
+          npm run all
+  test: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: "copy tool file with test values"
+        run: "cat __tests__/tool-versions > .tool-versions"
+      - uses: ./
+        id: versions
+      - name: "check exported env vars"
+        run: ./.github/workflows/scripts/test/test-envs.sh
+      - name: "check action output JSON"
+        env:
+          TOOLS_OUTPUT: ${{ steps.versions.outputs.tools }}
+        run: ./.github/workflows/scripts/test/test-json.sh "$TOOLS_OUTPUT"
+  test-wd: # test with working_directory argument
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: "copy tool file with test values"
+        run: "cat __tests__/tool-versions > __tests__/.tool-versions"
+      - uses: ./
+        id: custom_versions_file
+        with:
+          working_directory: "./__tests__"
+      - name: "check exported env vars"
+        run: ./.github/workflows/scripts/test/test-envs.sh
+      - name: "check action output JSON"
+        env:
+          TOOLS_OUTPUT: ${{ steps.custom_versions_file.outputs.tools }}
+        run: ./.github/workflows/scripts/test/test-json.sh "$TOOLS_OUTPUT"

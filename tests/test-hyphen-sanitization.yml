@@ -1,0 +1,79 @@
+name: Test hyphen sanitization - tool names with hyphens become underscores
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with hyphenated tool names
+        run: |
+          cat > "$GITHUB_WORKSPACE/.tool-versions" << 'EOF'
+          golangci-lint 1.54.2
+          kubectl 1.28.0
+          EOF
+
+      - id: action
+        uses: .
+
+      - name: Assert tools output is valid JSON
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          echo "$ACTUAL" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "FAIL: tools output is not valid JSON"
+            exit 1
+          }
+          echo "PASS: tools output is valid JSON"
+
+      - name: Assert golangci_lint (hyphen replaced with underscore) in JSON output
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          # Hyphens in tool names are replaced with underscores in JSON keys
+          GOLANGCI_VER=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golangci_lint',''))")
+          echo "golangci_lint version: $GOLANGCI_VER"
+          if [ "$GOLANGCI_VER" != "1.54.2" ]; then
+            echo "FAIL: expected golangci_lint version '1.54.2', got '$GOLANGCI_VER'"
+            exit 1
+          fi
+          echo "PASS: golangci_lint key found with correct version"
+
+      - name: Assert original hyphenated key is NOT in JSON output
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          # The original hyphenated name should not appear as a key
+          HYPHEN_VER=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golangci-lint','NOT_FOUND'))")
+          echo "golangci-lint (hyphenated) lookup: $HYPHEN_VER"
+          if [ "$HYPHEN_VER" != "NOT_FOUND" ]; then
+            echo "FAIL: expected hyphenated key 'golangci-lint' to be absent, but found '$HYPHEN_VER'"
+            exit 1
+          fi
+          echo "PASS: hyphenated key correctly absent"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var is set
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+          if [ "$GOLANGCI_LINT_VERSION" != "1.54.2" ]; then
+            echo "FAIL: expected GOLANGCI_LINT_VERSION='1.54.2', got '$GOLANGCI_LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert KUBECTL_VERSION env var is set
+        run: |
+          echo "KUBECTL_VERSION=$KUBECTL_VERSION"
+          if [ "$KUBECTL_VERSION" != "1.28.0" ]; then
+            echo "FAIL: expected KUBECTL_VERSION='1.28.0', got '$KUBECTL_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
