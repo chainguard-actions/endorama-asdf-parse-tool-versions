@@ -1,0 +1,62 @@
+name: Test multiple tools
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with multiple tools
+        run: |
+          printf 'nodejs 20.11.1\npython 3.11.0\nruby 3.2.0\n' > "$GITHUB_WORKSPACE/.tool-versions"
+
+      - id: versions
+        uses: .
+
+      - name: Assert tools JSON output contains all tools
+        env:
+          ACTUAL: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          # Check that each tool is present in the JSON output
+          if ! echo "$ACTUAL" | grep -q '"nodejs":"20.11.1"'; then
+            echo "FAIL: expected nodejs 20.11.1 in output"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"python":"3.11.0"'; then
+            echo "FAIL: expected python 3.11.0 in output"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"ruby":"3.2.0"'; then
+            echo "FAIL: expected ruby 3.2.0 in output"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert NODEJS_VERSION env var
+        run: |
+          echo "NODEJS_VERSION=$NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "20.11.1" ]; then
+            echo "FAIL: expected NODEJS_VERSION=20.11.1 but got '$NODEJS_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert PYTHON_VERSION env var
+        run: |
+          echo "PYTHON_VERSION=$PYTHON_VERSION"
+          if [ "$PYTHON_VERSION" != "3.11.0" ]; then
+            echo "FAIL: expected PYTHON_VERSION=3.11.0 but got '$PYTHON_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert RUBY_VERSION env var
+        run: |
+          echo "RUBY_VERSION=$RUBY_VERSION"
+          if [ "$RUBY_VERSION" != "3.2.0" ]; then
+            echo "FAIL: expected RUBY_VERSION=3.2.0 but got '$RUBY_VERSION'"
+            exit 1
+          fi
+          echo "PASS"

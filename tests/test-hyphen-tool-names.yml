@@ -1,0 +1,54 @@
+name: Test tool names with hyphens
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with hyphenated tool names
+        run: |
+          printf 'golangci-lint 1.55.0\nterraform-docs 0.16.0\n' > "$GITHUB_WORKSPACE/.tool-versions"
+
+      - id: versions
+        uses: .
+
+      - name: Assert tools JSON output uses underscores for hyphens
+        env:
+          ACTUAL: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          # Hyphens in tool names should be replaced with underscores in JSON keys
+          if ! echo "$ACTUAL" | grep -q '"golangci_lint":"1.55.0"'; then
+            echo "FAIL: expected golangci_lint (underscore) in JSON output, got: $ACTUAL"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"terraform_docs":"0.16.0"'; then
+            echo "FAIL: expected terraform_docs (underscore) in JSON output, got: $ACTUAL"
+            exit 1
+          fi
+          # Ensure original hyphenated names are NOT in the output
+          if echo "$ACTUAL" | grep -q '"golangci-lint"'; then
+            echo "FAIL: hyphenated key 'golangci-lint' should not appear in JSON output"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+          if [ "$GOLANGCI_LINT_VERSION" != "1.55.0" ]; then
+            echo "FAIL: expected GOLANGCI_LINT_VERSION=1.55.0 but got '$GOLANGCI_LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert TERRAFORM_DOCS_VERSION env var
+        run: |
+          echo "TERRAFORM_DOCS_VERSION=$TERRAFORM_DOCS_VERSION"
+          if [ "$TERRAFORM_DOCS_VERSION" != "0.16.0" ]; then
+            echo "FAIL: expected TERRAFORM_DOCS_VERSION=0.16.0 but got '$TERRAFORM_DOCS_VERSION'"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,4 +1,4 @@
-name: Test basic usage - parse tool-versions output
+name: Test basic usage - single tool
 on:
   workflow_dispatch:
 jobs:
@@ -7,35 +7,29 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action
-        id: versions
+      - name: Create .tool-versions file
+        run: |
+          echo "golang 1.21.0" > "$GITHUB_WORKSPACE/.tool-versions"
+
+      - id: versions
         uses: .
 
-      - name: Assert tools output is non-empty JSON
+      - name: Assert tools JSON output
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.versions.outputs.tools }}
         run: |
-          echo "tools output: $TOOLS"
-          if [ -z "$TOOLS" ]; then
-            echo "FAIL: tools output is empty"
+          echo "actual: $ACTUAL"
+          if [ "$ACTUAL" != '{"golang":"1.21.0"}' ]; then
+            echo "FAIL: expected '{\"golang\":\"1.21.0\"}' but got '$ACTUAL'"
             exit 1
           fi
-          # Verify it is valid JSON
-          echo "$TOOLS" | python3 -c "import sys, json; json.load(sys.stdin)" || {
-            echo "FAIL: tools output is not valid JSON"
-            exit 1
-          }
-          echo "PASS: tools output is valid JSON"
+          echo "PASS"
 
-      - name: Assert nodejs version is present in output
-        env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+      - name: Assert GOLANG_VERSION env var
         run: |
-          echo "tools output: $TOOLS"
-          NODEJS_VERSION=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('nodejs',''))")
-          echo "nodejs version: $NODEJS_VERSION"
-          if [ -z "$NODEJS_VERSION" ]; then
-            echo "FAIL: nodejs key not found in tools output"
+          echo "GOLANG_VERSION=$GOLANG_VERSION"
+          if [ "$GOLANG_VERSION" != "1.21.0" ]; then
+            echo "FAIL: expected GOLANG_VERSION=1.21.0 but got '$GOLANG_VERSION'"
             exit 1
           fi
-          echo "PASS: nodejs version found: $NODEJS_VERSION"
+          echo "PASS"
