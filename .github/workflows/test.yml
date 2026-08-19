@@ -1,0 +1,44 @@
+name: build-test
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'releases/*'
+
+permissions:
+  contents: read
+
+jobs:
+  build: # make sure build/ci work properly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - run: |
+          npm install
+      - run: |
+          npm run all
+  test: # make sure the action works on a clean machine without building
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: ./
+        id: versions
+
+      - env:
+          NODEJS_VERSION: ${{ env.NODEJS_VERSION }}
+        run: echo "$NODEJS_VERSION"
+      - env:
+          NODEJS_OUTPUT: ${{ fromJSON(steps.versions.outputs.tools).nodejs }}
+        run: echo "$NODEJS_OUTPUT"
+
+      - name: "override tool file with test values"
+        run: cat __tests__/tool-versions > .tool-versions
+      - uses: ./
+        id: custom_versions_file
+      - name: "check exported env vars"
+        run: ./.github/workflows/scripts/test/test-envs.sh
+      - name: "check action output JSON"
+        env:
+          TOOLS_OUTPUT: ${{ steps.custom_versions_file.outputs.tools }}
+        run: ./.github/workflows/scripts/test/test-json.sh "$TOOLS_OUTPUT"

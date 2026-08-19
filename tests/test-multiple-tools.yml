@@ -1,0 +1,80 @@
+name: Test multiple tools in .tool-versions
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with multiple tools
+        run: |
+          cat > .tool-versions <<'EOF'
+          golang 1.21.0
+          nodejs 20.11.1
+          python 3.12.0
+          EOF
+
+      - id: versions
+        uses: .
+
+      - name: Assert tools JSON output contains all tools
+        env:
+          ACTUAL: ${{ steps.versions.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          # Check golang
+          if ! echo "$ACTUAL" | grep -q '"golang"'; then
+            echo "FAIL: expected 'golang' key in JSON output"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"1.21.0"'; then
+            echo "FAIL: expected '1.21.0' version in JSON output"
+            exit 1
+          fi
+          # Check nodejs
+          if ! echo "$ACTUAL" | grep -q '"nodejs"'; then
+            echo "FAIL: expected 'nodejs' key in JSON output"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"20.11.1"'; then
+            echo "FAIL: expected '20.11.1' version in JSON output"
+            exit 1
+          fi
+          # Check python
+          if ! echo "$ACTUAL" | grep -q '"python"'; then
+            echo "FAIL: expected 'python' key in JSON output"
+            exit 1
+          fi
+          if ! echo "$ACTUAL" | grep -q '"3.12.0"'; then
+            echo "FAIL: expected '3.12.0' version in JSON output"
+            exit 1
+          fi
+          echo "PASS: tools output is $ACTUAL"
+
+      - name: Assert env vars are exported for all tools
+        run: |
+          echo "GOLANG_VERSION=$GOLANG_VERSION"
+          echo "NODEJS_VERSION=$NODEJS_VERSION"
+          echo "PYTHON_VERSION=$PYTHON_VERSION"
+          FAIL=0
+          if [ "$GOLANG_VERSION" != "1.21.0" ]; then
+            echo "FAIL: expected GOLANG_VERSION=1.21.0 but got '$GOLANG_VERSION'"
+            FAIL=1
+          fi
+          if [ "$NODEJS_VERSION" != "20.11.1" ]; then
+            echo "FAIL: expected NODEJS_VERSION=20.11.1 but got '$NODEJS_VERSION'"
+            FAIL=1
+          fi
+          if [ "$PYTHON_VERSION" != "3.12.0" ]; then
+            echo "FAIL: expected PYTHON_VERSION=3.12.0 but got '$PYTHON_VERSION'"
+            FAIL=1
+          fi
+          if [ "$FAIL" = "1" ]; then
+            exit 1
+          fi
+          echo "PASS"
