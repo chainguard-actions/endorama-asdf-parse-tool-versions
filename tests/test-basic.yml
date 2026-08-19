@@ -7,42 +7,71 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - id: versions
+      - name: Create .tool-versions file in workspace root
+        run: |
+          cat > "$GITHUB_WORKSPACE/.tool-versions" << 'EOF'
+          nodejs 18.17.0
+          python 3.11.4
+          EOF
+
+      - id: action
         uses: .
 
       - name: Assert tools output is valid JSON
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          echo "tools output: $TOOLS"
-          if [ -z "$TOOLS" ]; then
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
             echo "FAIL: tools output is empty"
             exit 1
           fi
-          echo "$TOOLS" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+          echo "$ACTUAL" | python3 -c "import sys, json; json.load(sys.stdin)" || {
             echo "FAIL: tools output is not valid JSON"
             exit 1
           }
           echo "PASS: tools output is valid JSON"
 
-      - name: Assert nodejs version is present in JSON output
+      - name: Assert nodejs version in output
         env:
-          TOOLS: ${{ steps.versions.outputs.tools }}
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          echo "tools output: $TOOLS"
-          NODEJS_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('nodejs',''))")
-          echo "nodejs version from JSON: $NODEJS_VER"
-          if [ -z "$NODEJS_VER" ]; then
-            echo "FAIL: nodejs key not found in tools JSON"
+          echo "actual: $ACTUAL"
+          NODEJS_VERSION=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('nodejs',''))")
+          echo "nodejs version: $NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "18.17.0" ]; then
+            echo "FAIL: expected nodejs version '18.17.0', got '$NODEJS_VERSION'"
             exit 1
           fi
-          echo "PASS: nodejs=$NODEJS_VER"
+          echo "PASS"
 
-      - name: Assert NODEJS_VERSION env var is exported
+      - name: Assert python version in output
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
         run: |
-          echo "NODEJS_VERSION=$NODEJS_VERSION"
-          if [ -z "$NODEJS_VERSION" ]; then
-            echo "FAIL: NODEJS_VERSION env var is not set"
+          echo "actual: $ACTUAL"
+          PYTHON_VERSION=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('python',''))")
+          echo "python version: $PYTHON_VERSION"
+          if [ "$PYTHON_VERSION" != "3.11.4" ]; then
+            echo "FAIL: expected python version '3.11.4', got '$PYTHON_VERSION'"
             exit 1
           fi
-          echo "PASS: NODEJS_VERSION=$NODEJS_VERSION"
+          echo "PASS"
+
+      - name: Assert NODEJS_VERSION env var is set
+        run: |
+          echo "NODEJS_VERSION env: $NODEJS_VERSION"
+          if [ "$NODEJS_VERSION" != "18.17.0" ]; then
+            echo "FAIL: expected NODEJS_VERSION='18.17.0', got '$NODEJS_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert PYTHON_VERSION env var is set
+        run: |
+          echo "PYTHON_VERSION env: $PYTHON_VERSION"
+          if [ "$PYTHON_VERSION" != "3.11.4" ]; then
+            echo "FAIL: expected PYTHON_VERSION='3.11.4', got '$PYTHON_VERSION'"
+            exit 1
+          fi
+          echo "PASS"

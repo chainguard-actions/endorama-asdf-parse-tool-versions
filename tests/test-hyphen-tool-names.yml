@@ -1,0 +1,78 @@
+name: Test hyphen tool names - hyphens replaced with underscores
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with hyphenated tool names
+        run: |
+          cat > "$GITHUB_WORKSPACE/.tool-versions" << 'EOF'
+          golangci-lint 1.54.2
+          kubectl 1.28.0
+          EOF
+
+      - id: action
+        uses: .
+
+      - name: Assert tools output is valid JSON
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          if [ -z "$ACTUAL" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          echo "$ACTUAL" | python3 -c "import sys, json; json.load(sys.stdin)" || {
+            echo "FAIL: tools output is not valid JSON"
+            exit 1
+          }
+          echo "PASS: tools output is valid JSON"
+
+      - name: Assert golangci_lint (hyphen replaced) version in JSON output
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          # Hyphens in tool names are replaced with underscores in JSON keys
+          LINT_VERSION=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('golangci_lint',''))")
+          echo "golangci_lint version: $LINT_VERSION"
+          if [ "$LINT_VERSION" != "1.54.2" ]; then
+            echo "FAIL: expected golangci_lint version '1.54.2', got '$LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert kubectl version in JSON output
+        env:
+          ACTUAL: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "actual: $ACTUAL"
+          KUBECTL_VERSION_OUT=$(echo "$ACTUAL" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d.get('kubectl',''))")
+          echo "kubectl version: $KUBECTL_VERSION_OUT"
+          if [ "$KUBECTL_VERSION_OUT" != "1.28.0" ]; then
+            echo "FAIL: expected kubectl version '1.28.0', got '$KUBECTL_VERSION_OUT'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var is set (hyphen becomes underscore)
+        run: |
+          echo "GOLANGCI_LINT_VERSION env: $GOLANGCI_LINT_VERSION"
+          if [ "$GOLANGCI_LINT_VERSION" != "1.54.2" ]; then
+            echo "FAIL: expected GOLANGCI_LINT_VERSION='1.54.2', got '$GOLANGCI_LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert KUBECTL_VERSION env var is set
+        run: |
+          echo "KUBECTL_VERSION env: $KUBECTL_VERSION"
+          if [ "$KUBECTL_VERSION" != "1.28.0" ]; then
+            echo "FAIL: expected KUBECTL_VERSION='1.28.0', got '$KUBECTL_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
