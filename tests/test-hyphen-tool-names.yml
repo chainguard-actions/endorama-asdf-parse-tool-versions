@@ -1,0 +1,67 @@
+name: Test hyphen tool names - hyphens converted to underscores
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create .tool-versions file with hyphenated tool names
+        run: |
+          cat > "$GITHUB_WORKSPACE/.tool-versions" <<'EOF'
+          golangci-lint 1.55.2
+          kubectl 1.28.0
+          EOF
+
+      - id: action
+        uses: .
+
+      - name: Assert golangci-lint is stored as golangci_lint in JSON output
+        env:
+          TOOLS: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "tools: $TOOLS"
+          if [ -z "$TOOLS" ]; then
+            echo "FAIL: tools output is empty"
+            exit 1
+          fi
+          # Hyphens in tool names should be replaced with underscores
+          GOLANGCI_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d = json.load(sys.stdin); print(d.get('golangci_lint', ''))")
+          echo "golangci_lint version: $GOLANGCI_VER"
+          if [ "$GOLANGCI_VER" != "1.55.2" ]; then
+            echo "FAIL: expected golangci_lint version '1.55.2', got '$GOLANGCI_VER'"
+            exit 1
+          fi
+          echo "PASS: golangci-lint stored as golangci_lint"
+
+      - name: Assert GOLANGCI_LINT_VERSION env var is exported
+        run: |
+          echo "GOLANGCI_LINT_VERSION=$GOLANGCI_LINT_VERSION"
+          if [ "$GOLANGCI_LINT_VERSION" != "1.55.2" ]; then
+            echo "FAIL: expected GOLANGCI_LINT_VERSION='1.55.2', got '$GOLANGCI_LINT_VERSION'"
+            exit 1
+          fi
+          echo "PASS: GOLANGCI_LINT_VERSION is correctly set"
+
+      - name: Assert kubectl version in JSON output
+        env:
+          TOOLS: ${{ steps.action.outputs.tools }}
+        run: |
+          echo "tools: $TOOLS"
+          KUBECTL_VER=$(echo "$TOOLS" | python3 -c "import sys, json; d = json.load(sys.stdin); print(d.get('kubectl', ''))")
+          echo "kubectl version: $KUBECTL_VER"
+          if [ "$KUBECTL_VER" != "1.28.0" ]; then
+            echo "FAIL: expected kubectl version '1.28.0', got '$KUBECTL_VER'"
+            exit 1
+          fi
+          echo "PASS"
+
+      - name: Assert KUBECTL_VERSION env var is exported
+        run: |
+          echo "KUBECTL_VERSION=$KUBECTL_VERSION"
+          if [ "$KUBECTL_VERSION" != "1.28.0" ]; then
+            echo "FAIL: expected KUBECTL_VERSION='1.28.0', got '$KUBECTL_VERSION'"
+            exit 1
+          fi
+          echo "PASS"
