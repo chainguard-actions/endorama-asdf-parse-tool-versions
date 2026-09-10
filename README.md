@@ -13,6 +13,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v1.5.0 | [`v1.5.0`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.5.0) | [`0ccedac`](https://github.com/endorama/asdf-parse-tool-versions/commit/0ccedac6b6ae060388ab9f0ba4473a61afc21a57) |
 | v1.5.1 | [`v1.5.1`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.5.1) | [`23a7edd`](https://github.com/endorama/asdf-parse-tool-versions/commit/23a7edd74b0f97626c857c48e32ebbe4ba596a23) |
 | v1.6.0 | [`v1.6.0`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.6.0) | [`e608639`](https://github.com/endorama/asdf-parse-tool-versions/commit/e60863920ff5af9bf1c794ffbaaef91384b07eed) |
+| v1.7.0 | [`v1.7.0`](https://github.com/chainguard-actions/endorama-asdf-parse-tool-versions/tree/v1.7.0) | [`115a5df`](https://github.com/endorama/asdf-parse-tool-versions/commit/115a5df5884438dfd08a3a21e9c9efdf06dd907e) |
 
 ## Privacy
 
